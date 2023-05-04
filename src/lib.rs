@@ -41,7 +41,7 @@ impl Level {
         match self {
             TRACE => Color::Blue.normal(),
             DEBUG => Color::Green.normal(),
-            INFO => Style::new(),
+            INFO => Style::new().bold(),
             WARN => Color::Yellow.normal(),
             ERROR => Color::Red.normal(),
             FATAL => Color::Red.bold()
