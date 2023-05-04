@@ -55,7 +55,7 @@ pub struct Logger {
 }
 
 impl Logger {
-    pub fn create(level: Level) -> Logger {
+    pub const fn create(level: Level) -> Logger {
         Logger { current_level: level, log_file: None }
     }
 
