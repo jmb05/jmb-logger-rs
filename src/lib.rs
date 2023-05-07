@@ -5,6 +5,48 @@ use ansi_term::{Color, Style};
 use crate::Level::{*};
 use chrono;
 
+#[macro_export]
+macro_rules! trace {
+    ($logger:expr, $($arg:tt)*) => {{
+        ($logger as &Logger).log(&format!($($arg)*), Level::TRACE);
+    }};
+}
+
+#[macro_export]
+macro_rules! debug {
+    ($logger:expr, $($arg:tt)*) => {{
+        ($logger as &Logger).log(&format!($($arg)*), Level::DEBUG);
+    }};
+}
+
+#[macro_export]
+macro_rules! info {
+    ($logger:expr, $($arg:tt)*) => {{
+        ($logger as &Logger).log(&format!($($arg)*), Level::INFO);
+    }};
+}
+
+#[macro_export]
+macro_rules! warn {
+    ($logger:expr, $($arg:tt)*) => {{
+        ($logger as &Logger).log(&format!($($arg)*), Level::WARN);
+    }};
+}
+
+#[macro_export]
+macro_rules! error {
+    ($logger:expr, $($arg:tt)*) => {{
+        ($logger as &Logger).log(&format!($($arg)*), Level::ERROR);
+    }};
+}
+
+#[macro_export]
+macro_rules! fatal {
+    ($logger:expr, $($arg:tt)*) => {{
+        ($logger as &Logger).log(&format!($($arg)*), Level::FATAL);
+    }};
+}
+
 pub enum Level {
     TRACE,
     DEBUG,
@@ -63,7 +105,7 @@ impl Logger {
         self.log_file = match File::create(Path::new(filename)) {
             Ok(file) => Some(file),
             Err(err) => {
-                self.error(&format!("Could not create logfile: {} -> {}", filename, err));
+                error!(&self, "Could not create logfile: {} -> {}", filename, err);
                 None
             },
         };
@@ -79,37 +121,12 @@ impl Logger {
             if self.log_file.is_some() {
                 let res = self.log_file.as_ref().unwrap().write_all((log_out.clone() + "\n").as_bytes());
                 if res.is_err() {
-                    self.error("Could not write to logfile");
+                    error!(&self, "Could not write to logfile");
                 }
             }
             println!("{}", level.color_code().paint(log_out));
         }
     }
-
-    pub fn trace(&self, message: &str) {
-        self.log(message, TRACE);
-    }
-
-    pub fn debug(&self, message: &str) {
-        self.log(message, DEBUG);
-    }
-
-    pub fn info(&self, message: &str) {
-        self.log(message, INFO);
-    }
-
-    pub fn warn(&self, message: &str) {
-        self.log(message, WARN);
-    }
-
-    pub fn error(&self, message: &str) {
-        self.log(message, ERROR);
-    }
-
-    pub fn fatal(&self, message: &str) {
-        self.log(message, FATAL);
-    }
-
 }
 
 #[cfg(test)]
@@ -120,10 +137,11 @@ mod tests {
     fn test_logging() {
         let mut logger = Logger::create(TRACE);
         logger.create_log_file("log/test.log");
-        logger.trace("Hi");
-        logger.info("Hi");
-        logger.warn("Hi");
-        logger.error("Hi");
-        logger.fatal("Hi");
+        trace!(&logger, "Hello {}", "world");
+        debug!(&logger, "Hello {}", "world");
+        info!(&logger, "Hello {}", "world");
+        warn!(&logger, "Hello {}", "world");
+        error!(&logger, "Hello {}", "world");
+        fatal!(&logger, "Hello {}", "world");
     }
 }
