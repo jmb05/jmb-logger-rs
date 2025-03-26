@@ -101,6 +101,12 @@ impl Logger {
         Logger { current_level: level, log_file: None }
     }
 
+    pub fn create_with_logfile(level: Level, filename: &str) -> Logger {
+        let mut logger = Logger { current_level: level, log_file: None };
+        logger.create_log_file(filename);
+        logger
+    }
+
     pub fn create_log_file(&mut self, filename: &str) {
         self.log_file = match File::create(Path::new(filename)) {
             Ok(file) => Some(file),
@@ -143,5 +149,12 @@ mod tests {
         warn!(&logger, "Hello {}", "world");
         error!(&logger, "Hello {}", "world");
         fatal!(&logger, "Hello {}", "world");
+    }
+
+    #[test]
+    fn test_log_file() {
+        let logger = Logger::create_with_logfile(TRACE, "test.log");
+        assert!(logger.log_file.is_some());
+        info!(&logger, "Test");
     }
 }
