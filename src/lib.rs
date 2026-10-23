@@ -8,45 +8,53 @@ use chrono;
 #[macro_export]
 macro_rules! trace {
     ($logger:expr, $($arg:tt)*) => {{
-        ($logger as &Logger).log(&format!($($arg)*), Level::TRACE);
+        log!($logger as &Logger, Level::TRACE, $($arg)*);
     }};
 }
 
 #[macro_export]
 macro_rules! debug {
     ($logger:expr, $($arg:tt)*) => {{
-        ($logger as &Logger).log(&format!($($arg)*), Level::DEBUG);
+        log!($logger as &Logger, Level::DEBUG, $($arg)*);
     }};
 }
 
 #[macro_export]
 macro_rules! info {
     ($logger:expr, $($arg:tt)*) => {{
-        ($logger as &Logger).log(&format!($($arg)*), Level::INFO);
+        log!($logger as &Logger, Level::INFO, $($arg)*);
     }};
 }
 
 #[macro_export]
 macro_rules! warn {
     ($logger:expr, $($arg:tt)*) => {{
-        ($logger as &Logger).log(&format!($($arg)*), Level::WARN);
+        log!($logger as &Logger, Level::WARN, $($arg)*);
     }};
 }
 
 #[macro_export]
 macro_rules! error {
     ($logger:expr, $($arg:tt)*) => {{
-        ($logger as &Logger).log(&format!($($arg)*), Level::ERROR);
+        log!($logger as &Logger, Level::ERROR, $($arg)*);
     }};
 }
 
 #[macro_export]
 macro_rules! fatal {
     ($logger:expr, $($arg:tt)*) => {{
-        ($logger as &Logger).log(&format!($($arg)*), Level::FATAL);
+        log!($logger as &Logger, Level::FATAL, $($arg)*);
     }};
 }
 
+#[macro_export]
+macro_rules! log {
+    ($logger:expr, $level:expr, $($arg:tt)*) => {{
+        ($logger as &Logger).log(&format!($($arg)*), ($level as Level));
+    }};
+}
+
+#[derive(Clone, Copy, Debug)]
 pub enum Level {
     TRACE,
     DEBUG,
