@@ -101,16 +101,20 @@ impl Level {
 
 pub struct Logger {
     current_level: Level,
-    log_file: Option<File>
+    log_file: Option<File>,
+    prefix: Option<String>,
 }
 
 impl Logger {
     pub const fn create(level: Level) -> Logger {
-        Logger { current_level: level, log_file: None }
+        Logger { current_level: level, log_file: None, prefix: None }
+    }
+    pub const fn create_with_custom_format(level: Level, fmt: String) -> Logger {
+        Logger { current_level: level, log_file: None, prefix: Some(fmt) }
     }
 
     pub fn create_with_logfile(level: Level, filename: &str) -> Logger {
-        let mut logger = Logger { current_level: level, log_file: None };
+        let mut logger = Logger { current_level: level, log_file: None, prefix: None };
         logger.create_log_file(filename);
         logger
     }
@@ -131,7 +135,15 @@ impl Logger {
 
     pub fn log(&self, message: &str, level: Level) {
         if level.idx() >= self.current_level.idx() {
-            let log_out = format!("[{}] [{}] {}", chrono::offset::Local::now().format("%d.%m.%Y %H:%M").to_string(), level.name(), message);
+            let prefix_format = if self.prefix.is_none() {
+                "[{time}] [{level}]"
+            } else {
+                self.prefix.as_ref().unwrap()
+            };
+            let log_prefix = prefix_format
+                .replace("{time}", chrono::offset::Local::now().format("%d.%m.%Y %H:%M").to_string().as_str())
+                .replace("{level}", level.name());
+            let log_out = format!("{} {}", log_prefix, message);
             if self.log_file.is_some() {
                 let res = self.log_file.as_ref().unwrap().write_all((log_out.clone() + "\n").as_bytes());
                 if res.is_err() {
@@ -164,5 +176,11 @@ mod tests {
         let logger = Logger::create_with_logfile(TRACE, "test.log");
         assert!(logger.log_file.is_some());
         info!(&logger, "Test");
+    }
+
+    #[test]
+    fn test_custom_prefix() {
+        let logger = Logger::create_with_custom_format(TRACE, "[{level}]".to_string());
+        info!(&logger, "Hello logger my old friend");
     }
 }
