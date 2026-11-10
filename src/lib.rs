@@ -9,42 +9,42 @@ use chrono;
 #[macro_export]
 macro_rules! trace {
     ($logger:expr, $($arg:tt)*) => {{
-        crate::log!($logger as &Logger, Level::TRACE, $($arg)*);
+        ($logger as &Logger).log(&format!($($arg)*), Level::TRACE);
     }};
 }
 
 #[macro_export]
 macro_rules! debug {
     ($logger:expr, $($arg:tt)*) => {{
-        crate::log!($logger as &Logger, Level::DEBUG, $($arg)*);
+        ($logger as &Logger).log(&format!($($arg)*), Level::DEBUG);
     }};
 }
 
 #[macro_export]
 macro_rules! info {
     ($logger:expr, $($arg:tt)*) => {{
-        crate::log!($logger as &Logger, Level::INFO, $($arg)*);
+        ($logger as &Logger).log(&format!($($arg)*), Level::INFO);
     }};
 }
 
 #[macro_export]
 macro_rules! warn {
     ($logger:expr, $($arg:tt)*) => {{
-        crate::log!($logger as &Logger, Level::WARN, $($arg)*);
+        ($logger as &Logger).log(&format!($($arg)*), Level::WARN);
     }};
 }
 
 #[macro_export]
 macro_rules! error {
     ($logger:expr, $($arg:tt)*) => {{
-        crate::log!($logger as &Logger, Level::ERROR, $($arg)*);
+        ($logger as &Logger).log(&format!($($arg)*), Level::ERROR);
     }};
 }
 
 #[macro_export]
 macro_rules! fatal {
     ($logger:expr, $($arg:tt)*) => {{
-        crate::log!($logger as &Logger, Level::FATAL, $($arg)*);
+        ($logger as &Logger).log(&format!($($arg)*), Level::FATAL);
     }};
 }
 
