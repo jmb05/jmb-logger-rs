@@ -1,9 +1,8 @@
 use crate::Level::*;
 use ansi_term::{Color, Style};
 use chrono;
-use std::fs::File;
+use std::fs::{File, OpenOptions};
 use std::io::Write;
-use std::path::Path;
 use std::sync::{Mutex, OnceLock};
 
 #[macro_export]
@@ -126,10 +125,11 @@ impl Logger {
 
     pub fn create_log_file(&self, filename: &str) {
         self.log_file.get_or_init(|| {
-            let Ok(file) = File::create(Path::new(filename)) else {
+            let Ok(file) = OpenOptions::new().create(true).append(true).open(&filename) else {
                 error!(&self, "Error creating logfile: {filename}");
                 panic!("Error creating logfile: {filename}")
             };
+            info!(&self, "Created log file: {filename}");
             Mutex::new(file)
         });
     }
