@@ -1,6 +1,7 @@
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
+use std::sync::{Mutex, OnceLock};
 use ansi_term::{Color, Style};
 use crate::Level::{*};
 use chrono;
@@ -8,42 +9,42 @@ use chrono;
 #[macro_export]
 macro_rules! trace {
     ($logger:expr, $($arg:tt)*) => {{
-        log!($logger as &Logger, Level::TRACE, $($arg)*);
+        crate::log!($logger as &Logger, Level::TRACE, $($arg)*);
     }};
 }
 
 #[macro_export]
 macro_rules! debug {
     ($logger:expr, $($arg:tt)*) => {{
-        log!($logger as &Logger, Level::DEBUG, $($arg)*);
+        crate::log!($logger as &Logger, Level::DEBUG, $($arg)*);
     }};
 }
 
 #[macro_export]
 macro_rules! info {
     ($logger:expr, $($arg:tt)*) => {{
-        log!($logger as &Logger, Level::INFO, $($arg)*);
+        crate::log!($logger as &Logger, Level::INFO, $($arg)*);
     }};
 }
 
 #[macro_export]
 macro_rules! warn {
     ($logger:expr, $($arg:tt)*) => {{
-        log!($logger as &Logger, Level::WARN, $($arg)*);
+        crate::log!($logger as &Logger, Level::WARN, $($arg)*);
     }};
 }
 
 #[macro_export]
 macro_rules! error {
     ($logger:expr, $($arg:tt)*) => {{
-        log!($logger as &Logger, Level::ERROR, $($arg)*);
+        crate::log!($logger as &Logger, Level::ERROR, $($arg)*);
     }};
 }
 
 #[macro_export]
 macro_rules! fatal {
     ($logger:expr, $($arg:tt)*) => {{
-        log!($logger as &Logger, Level::FATAL, $($arg)*);
+        crate::log!($logger as &Logger, Level::FATAL, $($arg)*);
     }};
 }
 
@@ -101,32 +102,36 @@ impl Level {
 
 pub struct Logger {
     current_level: Level,
-    log_file: Option<File>,
+    log_file: OnceLock<Mutex<File>>,
     prefix: Option<String>,
 }
 
 impl Logger {
     pub const fn create(level: Level) -> Logger {
-        Logger { current_level: level, log_file: None, prefix: None }
+        Logger { current_level: level, log_file: OnceLock::new(), prefix: None }
     }
     pub const fn create_with_custom_format(level: Level, fmt: String) -> Logger {
-        Logger { current_level: level, log_file: None, prefix: Some(fmt) }
+        Logger { current_level: level, log_file: OnceLock::new(), prefix: Some(fmt) }
     }
 
     pub fn create_with_logfile(level: Level, filename: &str) -> Logger {
-        let mut logger = Logger { current_level: level, log_file: None, prefix: None };
+        let mut logger = Logger { current_level: level, log_file: OnceLock::new(), prefix: None };
         logger.create_log_file(filename);
         logger
     }
 
-    pub fn create_log_file(&mut self, filename: &str) {
-        self.log_file = match File::create(Path::new(filename)) {
-            Ok(file) => Some(file),
-            Err(err) => {
-                error!(&self, "Could not create logfile: {} -> {}", filename, err);
-                None
-            },
-        };
+    pub fn create_timestamped_logfile(&self, name: &str) {
+        self.create_log_file(&format!("{name}-{}.log", chrono::offset::Local::now().format("%Y-%m-%d_%H-%M").to_string()));
+    }
+
+    pub fn create_log_file(&self, filename: &str) {
+        self.log_file.get_or_init(|| {
+            let Ok(file) = File::create(Path::new(filename)) else {
+                error!(&self, "Error creating logfile: {filename}");
+                panic!("Error creating logfile: {filename}")
+            };
+            Mutex::new(file)
+        });
     }
 
     pub fn set_level(&mut self, level: Level) {
@@ -144,10 +149,15 @@ impl Logger {
                 .replace("{time}", chrono::offset::Local::now().format("%d.%m.%Y %H:%M").to_string().as_str())
                 .replace("{level}", level.name());
             let log_out = format!("{} {}", log_prefix, message);
-            if self.log_file.is_some() {
-                let res = self.log_file.as_ref().unwrap().write_all((log_out.clone() + "\n").as_bytes());
-                if res.is_err() {
-                    error!(&self, "Could not write to logfile");
+            if let Some(file) = self.log_file.get() {
+                let file_lock = file.lock();
+                if file_lock.is_err() {
+                    error!(&self, "Couldn't get lock on log file");
+                } else {
+                    let res = file_lock.unwrap().write_all((log_out.clone() + "\n").as_bytes());
+                    if res.is_err() {
+                        error!(&self, "Could not write to logfile");
+                    }
                 }
             }
             println!("{}", level.color_code().paint(log_out));
@@ -174,7 +184,15 @@ mod tests {
     #[test]
     fn test_log_file() {
         let logger = Logger::create_with_logfile(TRACE, "test.log");
-        assert!(logger.log_file.is_some());
+        assert!(logger.log_file.get().is_some());
+        info!(&logger, "Test");
+    }
+
+    #[test]
+    fn test_timestamped_log_file() {
+        let logger = Logger::create(TRACE);
+        logger.create_timestamped_logfile("log/test");
+        assert!(logger.log_file.get().is_some());
         info!(&logger, "Test");
     }
 
