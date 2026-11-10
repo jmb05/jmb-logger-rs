@@ -1,10 +1,10 @@
+use crate::Level::*;
+use ansi_term::{Color, Style};
+use chrono;
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
 use std::sync::{Mutex, OnceLock};
-use ansi_term::{Color, Style};
-use crate::Level::{*};
-use chrono;
 
 #[macro_export]
 macro_rules! trace {
@@ -151,13 +151,16 @@ impl Logger {
             let log_out = format!("{} {}", log_prefix, message);
             if let Some(file) = self.log_file.get() {
                 let file_lock = file.lock();
-                if file_lock.is_err() {
-                    error!(&self, "Couldn't get lock on log file");
-                } else {
-                    let res = file_lock.unwrap().write_all((log_out.clone() + "\n").as_bytes());
-                    if res.is_err() {
-                        error!(&self, "Could not write to logfile");
+                match file_lock {
+                    Ok(mut file_lock) => {
+                        if let Err(e) = file_lock.write_all((log_out.clone() + "\n").as_bytes()) {
+                            error!(&self, "Could not write to logfile: {e}");
+                        }
+                        if let Err(e) = file_lock.flush() {
+                            error!(&self, "Could not write to logfile: {e}");
+                        }
                     }
+                    Err(e) => error!(&self, "Couldn't get lock on log file: {e}"),
                 }
             }
             println!("{}", level.color_code().paint(log_out));
