@@ -1,6 +1,5 @@
 use crate::Level::*;
 use ansi_term::{Color, Style};
-use chrono;
 use std::fs::{File, OpenOptions};
 use std::io::Write;
 use std::sync::{Mutex, OnceLock};
@@ -120,7 +119,7 @@ impl Logger {
     }
 
     pub fn create_timestamped_logfile(&self, name: &str) {
-        self.create_log_file(&format!("{name}-{}.log", chrono::offset::Local::now().format("%Y-%m-%d_%H-%M").to_string()));
+        self.create_log_file(&format!("{name}-{}.log", &time_format::strftime_local("%Y-%m-%d_%H-%M", time_format::now().unwrap()).unwrap()));
     }
 
     pub fn create_log_file(&self, filename: &str) {
@@ -146,7 +145,7 @@ impl Logger {
                 self.prefix.as_ref().unwrap()
             };
             let log_prefix = prefix_format
-                .replace("{time}", chrono::offset::Local::now().format("%d.%m.%Y %H:%M").to_string().as_str())
+                .replace("{time}", &time_format::strftime_local("%d.%m.%Y %H:%M", time_format::now().unwrap()).unwrap())
                 .replace("{level}", level.name());
             let log_out = format!("{} {}", log_prefix, message);
             if let Some(file) = self.log_file.get() {
